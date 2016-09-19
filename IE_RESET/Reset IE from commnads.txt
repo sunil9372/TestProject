@@ -1,0 +1,41 @@
+RunDll32.exe InetCpl.cpl,ResetIEtoDefaults -- > run on command prompt
+
+
+Run in Batch file:
+@echo off
+CLS
+ECHO.
+ECHO =========================================
+ECHO Please Run Privilege Elevation Tool First
+ECHO =========================================
+
+:checkPrivileges
+NET FILE 1>NUL 2>NUL
+if '%errorlevel%' == '0' ( goto gotPrivileges ) else ( goto getPrivileges )
+
+:getPrivileges
+if '%1'=='ELEV' (shift & goto gotPrivileges)
+ECHO.
+ECHO ******************************************
+ECHO Please Run Privilege Elevation Tool First
+ECHO ******************************************
+
+setlocal DisableDelayedExpansion
+set "batchPath=%~0"
+setlocal EnableDelayedExpansion
+ECHO Set UAC = CreateObject^("Shell.Application"^) > "%temp%\OEgetPrivileges.vbs"
+ECHO UAC.ShellExecute "!batchPath!", "ELEV", "", "runas", 1 >> "%temp%\OEgetPrivileges.vbs"
+"%temp%\OEgetPrivileges.vbs" 
+
+cmdkey.exe /list > "%TEMP%\List.txt"
+findstr.exe Target "%TEMP%\List.txt" > "%TEMP%\tokensonly.txt"
+FOR /F "tokens=1,2 delims= " %%G IN (%TEMP%\tokensonly.txt) DO cmdkey.exe /delete:%%H
+del "%TEMP%\*.*" /s /f /q
+
+taskkill.exe /F /IM iexplore.exe /T
+
+rundll32.exe InetCpl.cpl,ClearMyTracksByProcess 255
+
+rundll32 inetcpl.cpl ResetIEtoDefaults
+
+gpupdate.exe /force
